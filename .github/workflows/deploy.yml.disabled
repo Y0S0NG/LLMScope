@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - uses: actions/checkout@v3
@@ -44,42 +47,3 @@ jobs:
         push: true
         tags: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
-  deploy-staging:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Configure kubectl
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBE_CONFIG }}
-
-    - name: Deploy to staging
-      run: |
-        kubectl set image deployment/llmscope-api \
-          api=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
-          -n staging
-
-  deploy-production:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Configure kubectl
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBE_CONFIG }}
-
-    - name: Deploy to production
-      run: |
-        kubectl set image deployment/llmscope-api \
-          api=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
-          -n production
