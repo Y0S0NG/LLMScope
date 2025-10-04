@@ -1,0 +1,43 @@
+{
+  "dashboard": {
+    "title": "LLMScope Monitoring",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llmscope_requests_total[5m])"
+          }
+        ]
+      },
+      {
+        "title": "Average Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "avg(llmscope_latency_ms)"
+          }
+        ]
+      },
+      {
+        "title": "Total Cost",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(llmscope_cost_total)"
+          }
+        ]
+      },
+      {
+        "title": "Token Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llmscope_tokens_total[5m])"
+          }
+        ]
+      }
+    ]
+  }
+}
