@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     api_version: str = "1.0.0"
 
     # Database
-    database_url: str = "postgresql://localhost/llmscope"
+    database_url: str = "postgresql://postgres:postgres@localhost:5433/llmscope"
 
     # Redis
     redis_url: str = "redis://localhost:6379"
