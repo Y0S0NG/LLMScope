@@ -13,7 +13,7 @@ asyncpg==0.29.0           # ← CRITICAL: Async PostgreSQL driver
 psycopg2-binary==2.9.9    # Keep for sync operations if needed
 
 # Redis & Caching
-redis==5.0.1
+redis[hiredis]==5.0.1  # With async support and hiredis for performance
 
 # Background Tasks
 celery==5.3.4             # ← NEW: For workers

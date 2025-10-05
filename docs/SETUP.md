@@ -6,36 +6,96 @@
 - Python 3.8+ (for SDK)
 - Node.js 18+ (for frontend)
 
-## Quick Start with Docker
+## Quick Start with Docker (Single-Tenant Mode)
 
-1. Clone the repository:
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/yourusername/llmscope.git
 cd llmscope
 ```
 
-2. Create environment file:
+### 2. Create environment file
 
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+cp .env.example backend/.env
 ```
 
-3. Start services:
+**Default configuration (.env):**
+```bash
+# Single-Tenant Mode
+SINGLE_TENANT_MODE=true
+REQUIRE_AUTH=true
+API_KEY=llmscope-local-key
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/llmscope
+
+# Default IDs
+DEFAULT_TENANT_ID=default
+DEFAULT_PROJECT_ID=main
+```
+
+### 3. Start services
 
 ```bash
 cd backend
 docker-compose up -d
 ```
 
-4. Initialize database:
+This starts:
+- **PostgreSQL** with TimescaleDB (port 5433)
+- **Redis** (port 6379)
+- **API Server** (port 8000)
+
+### 4. Initialize database
 
 ```bash
+# Run migrations to create tables and seed default tenant
 docker-compose exec api alembic upgrade head
 ```
 
-5. Access the dashboard at `http://localhost:3000`
+You should see output like:
+```
+INFO  [alembic.runtime.migration] Running upgrade  -> ebb440b41de1, Initial schema
+INFO  [alembic.runtime.migration] Running upgrade ebb440b41de1 -> 67aa717b7457, Add TimescaleDB hypertable
+INFO  [alembic.runtime.migration] Running upgrade 67aa717b7457 -> 003_seed_default, Seed default tenant
+✅ Default tenant created with API key: llmscope-local-key
+```
+
+### 5. Verify installation
+
+```bash
+# Check health endpoint
+curl http://localhost:8000/health
+
+# Expected response:
+# {"status":"healthy","mode":"single-tenant"}
+```
+
+### 6. Access the dashboard
+
+Open http://localhost:3000 to see the LLMScope dashboard
+
+---
+
+## Single-Tenant Mode Details
+
+In single-tenant mode:
+- ✅ No tenant signup or management needed
+- ✅ One static API key for all requests
+- ✅ All events automatically associated with default tenant/project
+- ✅ Perfect for self-hosted deployment
+- ✅ Database schema ready for multi-tenant upgrade later
+
+**API Key:** `llmscope-local-key` (change in `.env` if needed)
+
+**Usage Example:**
+```python
+from llmscope import LLMTracker
+
+tracker = LLMTracker(api_key="llmscope-local-key", base_url="http://localhost:8000")
+```
 
 ## Development Setup
 

@@ -3,14 +3,32 @@ version: '3.8'
 services:
   api:
     build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/llmscope
       - REDIS_URL=redis://redis:6379
+      - SINGLE_TENANT_MODE=true
+      - REQUIRE_AUTH=true
+      - API_KEY=llmscope-local-key
     depends_on:
       - db
       - redis
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: python run_worker.py
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/llmscope
+      - REDIS_URL=redis://redis:6379
+      - REDIS_QUEUE_NAME=llmscope:events
+      - REDIS_QUEUE_BATCH_SIZE=100
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
 
   db:
     image: timescale/timescaledb:latest-pg15
@@ -22,13 +40,15 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
-  
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:

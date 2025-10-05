@@ -14,17 +14,37 @@ LLMScope provides real-time monitoring, cost tracking, and analytics for your LL
 - 📦 **Easy Integration**: SDKs for Python and TypeScript with automatic tracking
 - 🎯 **Provider Support**: OpenAI, Anthropic, and custom providers
 
-## Quick Start
+## Quick Start (Self-Hosted Single-Tenant Mode)
 
-### 1. Start the platform
+### 1. Clone and setup
 
 ```bash
 git clone https://github.com/yourusername/llmscope.git
-cd llmscope/backend
+cd llmscope
+cp .env.example backend/.env
+```
+
+### 2. Start the platform with Docker
+
+```bash
+cd backend
 docker-compose up -d
 ```
 
-### 2. Install SDK
+### 3. Run database migrations
+
+```bash
+# This will create tables and seed the default tenant
+docker-compose exec api alembic upgrade head
+```
+
+You should see:
+```
+✅ Default tenant created: ID=default, API_KEY=llmscope-local-key
+✅ Default project created: ID=main
+```
+
+### 4. Install SDK
 
 **Python:**
 ```bash
@@ -36,14 +56,14 @@ pip install llmscope
 npm install @llmscope/sdk
 ```
 
-### 3. Track your LLM calls
+### 5. Track your LLM calls
 
 **Python:**
 ```python
 from llmscope.openai_patch import patch_openai
 
-# Automatically track all OpenAI calls
-patch_openai(api_key="your-llmscope-api-key")
+# Use the default API key from .env (llmscope-local-key)
+patch_openai(api_key="llmscope-local-key", base_url="http://localhost:8000")
 
 # Use OpenAI normally - all calls are tracked!
 import openai
@@ -57,7 +77,7 @@ response = openai.ChatCompletion.create(
 ```typescript
 import { LLMTracker } from '@llmscope/sdk';
 
-const tracker = new LLMTracker('your-api-key');
+const tracker = new LLMTracker('llmscope-local-key', 'http://localhost:8000');
 
 await tracker.trackEvent({
   model: 'gpt-4',
@@ -68,9 +88,32 @@ await tracker.trackEvent({
 });
 ```
 
-### 4. View your dashboard
+### 6. View your dashboard
 
 Open http://localhost:3000 to see real-time metrics, cost breakdown, and live event feed.
+
+---
+
+## Deployment Modes
+
+### 🏠 Single-Tenant (Default - Self-Hosted)
+Perfect for individual developers and teams. No tenant management needed - just deploy and use with a single static API key.
+
+**Configuration:**
+```bash
+SINGLE_TENANT_MODE=true
+REQUIRE_AUTH=true
+API_KEY=llmscope-local-key
+```
+
+### 🏢 Multi-Tenant (Coming Soon)
+For SaaS deployments with multiple organizations. Requires tenant signup, API key management, and usage isolation.
+
+**To enable (future):**
+```bash
+SINGLE_TENANT_MODE=false
+# Implement tenant signup/management
+```
 
 ## Architecture
 
