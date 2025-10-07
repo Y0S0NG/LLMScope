@@ -27,9 +27,17 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "requests>=2.28.0",
+        "pydantic>=2.0.0",
     ],
     extras_require={
         "openai": ["openai>=1.0.0"],
         "anthropic": ["anthropic>=0.5.0"],
+        "dev": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "black>=23.0.0",
+            "flake8>=6.0.0",
+            "mypy>=1.0.0",
+        ],
     },
 )
