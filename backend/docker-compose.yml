@@ -3,15 +3,18 @@ version: '3.8'
 services:
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
+    volumes:
+      - ./app:/app/app
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/llmscope
       - REDIS_URL=redis://redis:6379
       - SINGLE_TENANT_MODE=true
       - REQUIRE_AUTH=true
       - API_KEY=llmscope-local-key
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
       - db
       - redis

@@ -36,3 +36,20 @@ async def websocket_endpoint(websocket: WebSocket):
             # Handle incoming messages if needed
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+@router.websocket("/ws/events")
+async def events_websocket(websocket: WebSocket):
+    """WebSocket endpoint for real-time event updates"""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+async def notify_event_update():
+    """Notify all connected clients about new events"""
+    await manager.broadcast({"type": "event_update"})
