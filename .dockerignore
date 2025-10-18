@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+PHASE*.md
+TESTING_GUIDE.md
+QUICKSTART.md
+DEPLOYMENT.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Node modules (will be installed in container)
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Python
+backend/__pycache__
+backend/**/__pycache__
+backend/*.py[cod]
+backend/*$py.class
+backend/.Python
+backend/venv
+backend/env
+backend/ENV
+backend/.venv
+backend/*.egg-info
+backend/dist
+backend/build
+
+# Environment files (use .env.example instead)
+backend/.env
+backend/.env.local
+.env
+.env.local
+
+# Testing
+backend/.pytest_cache
+backend/.coverage
+backend/htmlcov
+
+# Database
+backend/*.db
+backend/*.sqlite3
+backend/*.sqlite
+
+# Logs
+backend/logs
+backend/*.log
+
+# Docker
+docker-compose.override.yml
+Dockerfile*
+.dockerignore
+
+# SDK and examples (not needed for demo app)
+sdk/
+examples/
+demos/
+
+# Playground folder (separate deployment, not needed for Docker)
+playground/
+
+# Misc
+.cache
+temp
+tmp

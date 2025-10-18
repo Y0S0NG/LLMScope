@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: llmscope-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: llmscope
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - llmscope-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: llmscope-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - llmscope-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: llmscope-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/llmscope
+      - REDIS_URL=redis://redis:6379
+      - REDIS_QUEUE_NAME=llmscope:events
+      - REDIS_QUEUE_BATCH_SIZE=100
+      - REDIS_DLQ_NAME=llmscope:events:dlq
+      - WORKER_POLL_INTERVAL=0.1
+      - WORKER_MAX_RETRIES=3
+      - WORKER_RETRY_BACKOFF_BASE=2.0
+      - SECRET_KEY=${SECRET_KEY}
+      - API_KEY_HEADER=X-API-Key
+      - SINGLE_TENANT_MODE=${SINGLE_TENANT_MODE:-true}
+      - REQUIRE_AUTH=${REQUIRE_AUTH:-true}
+      - API_KEY=${API_KEY:-llmscope-local-key}
+      - DEFAULT_TENANT_ID=66579b8b-a800-5cfc-a46d-321e042fb316
+      - DEFAULT_PROJECT_ID=fd6966a2-3e4f-5fcd-a51a-d5fb8ba3abc6
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-1000}
+      - RATE_LIMIT_PERIOD=${RATE_LIMIT_PERIOD:-60}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - METRICS_PORT=9090
+      - ENABLE_WORKERS=${ENABLE_WORKERS:-true}
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - llmscope-network
+    restart: unless-stopped
+
+  # Worker (processes queued events from Redis)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: llmscope-worker
+    command: python run_worker.py
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/llmscope
+      - REDIS_URL=redis://redis:6379
+      - REDIS_QUEUE_NAME=llmscope:events
+      - REDIS_QUEUE_BATCH_SIZE=100
+      - REDIS_DLQ_NAME=llmscope:events:dlq
+      - WORKER_POLL_INTERVAL=0.1
+      - WORKER_MAX_RETRIES=3
+      - WORKER_RETRY_BACKOFF_BASE=2.0
+      - DEFAULT_TENANT_ID=66579b8b-a800-5cfc-a46d-321e042fb316
+      - DEFAULT_PROJECT_ID=fd6966a2-3e4f-5fcd-a51a-d5fb8ba3abc6
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - llmscope-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: llmscope-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - llmscope-network
+    restart: unless-stopped
+
+networks:
+  llmscope-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

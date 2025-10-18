@@ -187,6 +187,36 @@ npm test
 
 ## Deployment
 
+### 🎮 Playground Application (Docker - Recommended for Quick Start)
+
+Deploy the LLMScope Playground app with React frontend locally using Docker:
+
+```bash
+# 1. Clone the repository
+git clone <your-repository-url>
+cd LLMScope
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env and add your PLAYGROUND_ANTHROPIC_API_KEY and PLAYGROUND_SECRET_KEY
+
+# 3. Start all services (frontend, backend, postgres, redis)
+docker-compose up -d
+
+# 4. Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8001/docs
+```
+
+**What's included:**
+- React frontend with Vite and TailwindCSS
+- FastAPI backend with WebSocket support
+- PostgreSQL database
+- Redis for caching and sessions
+- Nginx for production-grade serving
+
+See [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) for detailed instructions, troubleshooting, and management commands.
+
 ### Docker Compose (Development)
 ```bash
 docker-compose up -d

@@ -19,9 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Enable TimescaleDB extension
+    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+
     # Convert llm_events to hypertable
     op.execute("""
-        SELECT create_hypertable('llm_events', 'time', 
+        SELECT create_hypertable('llm_events', 'time',
             chunk_time_interval => INTERVAL '1 day',
             if_not_exists => TRUE
         );
@@ -39,21 +42,16 @@ def upgrade() -> None:
     """)
     
     op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_user_session 
+        CREATE INDEX IF NOT EXISTS idx_user_session
         ON llm_events (user_id, session_id, time DESC);
     """)
-    
-     # ⬇️ NEW: Create materialized views OUTSIDE transaction
-    connection = op.get_bind()
-    
-    # Commit the transaction before creating materialized views
-    connection.execute(sa.text("COMMIT;"))
-    
-    # Now create the materialized views outside transaction
-    connection.execution_options(isolation_level="AUTOCOMMIT").execute(sa.text("""
+
+    # Create continuous aggregates (TimescaleDB materialized views)
+    # Note: These will be created within the same transaction
+    op.execute("""
         CREATE MATERIALIZED VIEW IF NOT EXISTS hourly_stats
         WITH (timescaledb.continuous) AS
-        SELECT 
+        SELECT
             time_bucket('1 hour', time) AS hour,
             tenant_id,
             project_id,
@@ -67,13 +65,14 @@ def upgrade() -> None:
             SUM(tokens_total) as total_tokens,
             COUNT(*) FILTER (WHERE has_error = true) as error_count
         FROM llm_events
-        GROUP BY hour, tenant_id, project_id, model;
-    """))
-    
-    connection.execution_options(isolation_level="AUTOCOMMIT").execute(sa.text("""
+        GROUP BY hour, tenant_id, project_id, model
+        WITH NO DATA;
+    """)
+
+    op.execute("""
         CREATE MATERIALIZED VIEW IF NOT EXISTS daily_stats
         WITH (timescaledb.continuous) AS
-        SELECT 
+        SELECT
             time_bucket('1 day', time) AS day,
             tenant_id,
             project_id,
@@ -81,8 +80,9 @@ def upgrade() -> None:
             COUNT(DISTINCT user_id) as unique_users,
             COUNT(*) as total_requests
         FROM llm_events
-        GROUP BY day, tenant_id, project_id;
-    """))
+        GROUP BY day, tenant_id, project_id
+        WITH NO DATA;
+    """)
 
 def downgrade() -> None:
     op.execute("DROP MATERIALIZED VIEW IF EXISTS daily_stats;")

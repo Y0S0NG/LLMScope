@@ -1,67 +1,72 @@
-/**
- * API client
- */
+import axios from 'axios';
+import type {
+  SessionInfo,
+  SessionMetrics,
+  CreateSessionResponse,
+  ResetSessionResponse,
+  HealthResponse,
+  ChatResponse,
+  EventResponse,
+} from '../types';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// Create axios instance
+const apiClient = axios.create({
+  baseURL: '/api/v1', // Vite proxy will handle this
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-class APIClient {
-  private baseUrl: string;
-  private apiKey: string | null = null;
+// Add session ID to requests
+let currentSessionId: string | null = null;
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+export const setSessionId = (sessionId: string | null) => {
+  currentSessionId = sessionId;
+};
+
+apiClient.interceptors.request.use((config) => {
+  if (currentSessionId) {
+    config.headers['X-Session-ID'] = currentSessionId;
   }
+  return config;
+});
 
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+// API Functions
 
-  private async request(
-    method: string,
-    path: string,
-    data?: any
-  ): Promise<any> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+export const createSession = async (): Promise<CreateSessionResponse> => {
+  const response = await apiClient.post<CreateSessionResponse>('/sessions/create');
+  return response.data;
+};
 
-    if (this.apiKey) {
-      headers['X-API-Key'] = this.apiKey;
-    }
+export const getCurrentSessionInfo = async (): Promise<SessionInfo> => {
+  const response = await apiClient.get<SessionInfo>('/sessions/current/info');
+  return response.data;
+};
 
-    const config: RequestInit = {
-      method,
-      headers,
-    };
+export const getCurrentSessionMetrics = async (): Promise<SessionMetrics> => {
+  const response = await apiClient.get<SessionMetrics>('/sessions/current/metrics');
+  return response.data;
+};
 
-    if (data) {
-      config.body = JSON.stringify(data);
-    }
+export const resetCurrentSession = async (): Promise<ResetSessionResponse> => {
+  const response = await apiClient.post<ResetSessionResponse>('/sessions/current/reset');
+  return response.data;
+};
 
-    const response = await fetch(`${this.baseUrl}${path}`, config);
+export const getHealth = async (): Promise<HealthResponse> => {
+  const response = await axios.get<HealthResponse>('/health');
+  return response.data;
+};
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+// Chat Functions
+export const sendChatMessage = async (message: string): Promise<ChatResponse> => {
+  const response = await apiClient.post<ChatResponse>('/playground/chat', { message });
+  return response.data;
+};
 
-    return await response.json();
-  }
+export const getRecentEvents = async (limit: number = 50): Promise<EventResponse[]> => {
+  const response = await apiClient.get<EventResponse[]>(`/events/recent?limit=${limit}`);
+  return response.data;
+};
 
-  async get(path: string): Promise<any> {
-    return this.request('GET', path);
-  }
-
-  async post(path: string, data: any): Promise<any> {
-    return this.request('POST', path, data);
-  }
-
-  async put(path: string, data: any): Promise<any> {
-    return this.request('PUT', path, data);
-  }
-
-  async delete(path: string): Promise<any> {
-    return this.request('DELETE', path);
-  }
-}
-
-export const apiClient = new APIClient(BASE_URL);
+export default apiClient;
